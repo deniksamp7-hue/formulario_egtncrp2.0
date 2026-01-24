@@ -14,7 +14,7 @@
 
         body { 
             font-family: 'Segoe UI', sans-serif; 
-            background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('formulario.jpg');
+            background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('https://i.imgur.com/8QzXyFp.jpg');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -142,7 +142,8 @@
 
 <script>
     let config = {
-        webhook: localStorage.getItem('mta_webhook') || "SUA_WEBHOOK_AQUI",
+        // COLE SEU LINK ABAIXO ENTRE AS ASPAS
+        webhook: "SEU_LINK_DO_WEBHOOK_AQUI",
         errosParaReprovar: 3,
         tempoPorPergunta: 30
     };
@@ -256,18 +257,15 @@
     }
 
     async function enviarParaDiscord(status) {
-        if (!config.webhook || config.webhook === "SUA_WEBHOOK_AQUI") return;
+        if (!config.webhook || config.webhook.includes("SEU_LINK_DO_WEBHOOK")) return;
 
         const formData = new FormData();
-        
-        // Adiciona a foto do ESC ao envio
         formData.append('file', fotoArquivo, 'print_esc.png');
 
-        // Cria o relatório completo
         const embed = {
             title: "🇪🇬 NOVO RECRUTAMENTO - TROPA DO EGITO 🔱",
             description: `**RELATÓRIO DE QUESTÕES:**\n${historico.join('\n')}`,
-            color: status === "APROVADO" ? 12951641 : 15158332,
+            color: status === "APROVADO" ? 4437377 : 15749431,
             fields: [
                 { name: "👤 Candidato", value: `**Nick:** ${dadosCandidato.nick}\n**Passaporte:** ${dadosCandidato.pass}\n**Discord:** <@${dadosCandidato.discord}>`, inline: true },
                 { name: "📋 Info IC/OOC", value: `**Idade:** ${dadosCandidato.idade}\n**Exp:** ${dadosCandidato.tempo}`, inline: true },
