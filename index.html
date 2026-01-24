@@ -102,23 +102,15 @@
             right: 15px;
             background: none;
             border: none;
-            color: rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.1);
             cursor: pointer;
-            font-size: 20px;
+            font-size: 18px;
             width: auto;
             padding: 5px;
+            transition: 0.3s;
         }
 
-        #btn-adm-trigger:hover { color: var(--cor-primaria); }
-
-        .admin-box {
-            border-top: 2px solid var(--cor-primaria);
-            margin-top: 20px;
-            padding-top: 20px;
-            background: rgba(0,0,0,0.4);
-            border-radius: 10px;
-            padding: 15px;
-        }
+        #btn-adm-trigger:hover { color: var(--cor-primaria); opacity: 1; }
 
     </style>
 </head>
@@ -164,21 +156,23 @@
 
 <div id="tela-admin" class="container hidden">
     <h2>Configurações ADM</h2>
-    <p>Ajuste o link de recebimento dos dados:</p>
-    <input type="password" id="webhook-input" placeholder="Cole aqui o link do Webhook do Discord">
-    <button onclick="salvarConfig()">Salvar e Voltar</button>
-    <button style="background: #333; color: white;" onclick="fecharAdmin()">Cancelar</button>
+    <p style="font-size: 0.9rem;">Webhook atual:</p>
+    <input type="text" id="webhook-input" placeholder="Link do Webhook">
+    <button onclick="salvarConfig()">Salvar Novo Webhook</button>
+    <button style="background: #333; color: white;" onclick="fecharAdmin()">Voltar</button>
 </div>
 
-<button id="btn-adm-trigger" onclick="abrirAdmin()" title="Configurações">⚙️</button>
+<button id="btn-adm-trigger" onclick="abrirAdmin()">⚙️</button>
 
 <script>
-    // Carrega o webhook do armazenamento do navegador ou usa o padrão
+    // Link padrão já configurado conforme sua solicitação
+    const WEBHOOK_PADRAO = "https://discord.com/api/webhooks/1461406807506423878/gTeh2vqbDMeM1VAWeuTfRZNOgpuFPKjU06dIbA02f0W7pkAUKQ2NlZJo01IkdrOzRaYZ";
+
     let config = {
-        webhook: localStorage.getItem('egito_webhook') || "INSIRA_SEU_WEBHOOK",
+        webhook: localStorage.getItem('egito_webhook') || WEBHOOK_PADRAO,
         errosParaReprovar: 3,
         tempoPorPergunta: 30,
-        senhaAdm: "egito123" // SENHA PARA ACESSAR A ABA ADM
+        senhaAdm: "egito123" 
     };
 
     const perguntas = [
@@ -202,15 +196,12 @@
     let indiceAtual = 0, erros = 0, tempoRestante = config.tempoPorPergunta, intervalo;
     let dadosCandidato = {}, historico = [], fotoArquivo = null;
 
-    // --- FUNÇÕES DE ADMIN ---
     function abrirAdmin() {
-        let senha = prompt("Digite a senha de administrador:");
+        let senha = prompt("Senha ADM:");
         if (senha === config.senhaAdm) {
             document.getElementById('tela-cadastro').classList.add('hidden');
             document.getElementById('tela-admin').classList.remove('hidden');
             document.getElementById('webhook-input').value = config.webhook;
-        } else {
-            alert("Senha incorreta!");
         }
     }
 
@@ -220,37 +211,33 @@
     }
 
     function salvarConfig() {
-        const novoWebhook = document.getElementById('webhook-input').value;
-        if (novoWebhook.startsWith("https://discord.com/api/webhooks/")) {
-            config.webhook = novoWebhook;
-            localStorage.setItem('egito_webhook', novoWebhook);
-            alert("Configurações salvas com sucesso!");
+        const url = document.getElementById('webhook-input').value;
+        if (url.includes("discord.com/api/webhooks/")) {
+            config.webhook = url;
+            localStorage.setItem('egito_webhook', url);
+            alert("Salvo! O sistema usará este link a partir de agora.");
             fecharAdmin();
         } else {
-            alert("Por favor, insira um link de Webhook válido do Discord!");
+            alert("Link inválido!");
         }
     }
 
-    // --- LÓGICA DO FORMULÁRIO ---
     function previewFile(event) {
         fotoArquivo = event.target.files[0];
         const preview = document.getElementById('preview-img');
         const label = document.getElementById('label-foto');
         if (fotoArquivo) {
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = e => {
                 preview.src = e.target.result;
                 preview.style.display = "block";
                 label.innerText = "✅ PRINT SELECIONADO";
-            }
+            };
             reader.readAsDataURL(fotoArquivo);
         }
     }
 
     function iniciarProcesso() {
-        if (config.webhook === "INSIRA_SEU_WEBHOOK") {
-            return alert("ERRO: O Webhook não foi configurado pelo Administrador!");
-        }
         dadosCandidato = {
             discord: document.getElementById('discordID').value,
             nick: document.getElementById('nick').value,
@@ -259,7 +246,7 @@
             tempo: document.getElementById('tempo').value
         };
         if (!dadosCandidato.discord || !dadosCandidato.nick || !fotoArquivo) {
-            return alert("ERRO: Preencha todos os dados e anexe o Print do ESC!");
+            return alert("Preencha tudo e anexe o Print!");
         }
         document.getElementById('tela-cadastro').classList.add('hidden');
         document.getElementById('tela-quiz').classList.remove('hidden');
@@ -300,7 +287,7 @@
             tempoRestante--;
             document.getElementById('timer').innerText = tempoRestante;
             if (tempoRestante <= 0) {
-                historico.push(`⏰ ${p.q} (Esgotado)`);
+                historico.push(`⏰ ${p.q} (Tempo)`);
                 erros++;
                 if (erros >= config.errosParaReprovar) finalizar(false);
                 else { indiceAtual++; mostrarPergunta(); }
@@ -322,23 +309,18 @@
         formData.append('file', fotoArquivo, 'print_esc.png');
         const embed = {
             title: "🇪🇬 NOVO RECRUTAMENTO - TROPA DO EGITO 🔱",
-            description: `**RELATÓRIO DE QUESTÕES:**\n${historico.join('\n')}`,
+            description: `**RELATÓRIO:**\n${historico.join('\n')}`,
             color: status === "APROVADO" ? 4437377 : 15749431,
             fields: [
-                { name: "👤 Candidato", value: `**Nick:** ${dadosCandidato.nick}\n**Passaporte:** ${dadosCandidato.pass}\n**Discord:** <@${dadosCandidato.discord}>`, inline: true },
-                { name: "📋 Info IC/OOC", value: `**Idade:** ${dadosCandidato.idade}\n**Exp:** ${dadosCandidato.tempo}`, inline: true },
-                { name: "📊 Resultado", value: `**Status:** \`${status}\`\n**Erros:** ${erros}/3`, inline: false }
+                { name: "👤 Candidato", value: `**Nick:** ${dadosCandidato.nick}\n**Pass:** ${dadosCandidato.pass}\n**Discord:** <@${dadosCandidato.discord}>`, inline: true },
+                { name: "📊 Resultado", value: `**Status:** ${status}\n**Erros:** ${erros}/3`, inline: true }
             ],
             image: { url: 'attachment://print_esc.png' },
-            footer: { text: "EgitoNCRP • Sistema de Verificação" },
-            timestamp: new Date()
+            footer: { text: "EgitoNCRP • " + new Date().toLocaleString() }
         };
         formData.append('payload_json', JSON.stringify({ embeds: [embed] }));
-        try {
-            await fetch(config.webhook, { method: 'POST', body: formData });
-        } catch (e) {
-            console.error("Erro ao enviar para o Discord");
-        }
+        try { await fetch(config.webhook, { method: 'POST', body: formData }); } 
+        catch (e) { console.error("Erro no envio"); }
     }
 </script>
 </body>
