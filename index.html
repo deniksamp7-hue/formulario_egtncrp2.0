@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario EgitoNCRP - Oficial</title>
+    <style>
+        :root { 
+            --cor-primaria: #c5a059; 
+            --cor-erro: #f04747; 
+            --cor-sucesso: #43b581; 
+            --cor-fundo-card: rgba(15, 15, 15, 0.96); 
+        }
+
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('formulario.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: white; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+        }
+
+        .container { 
+            background: var(--cor-fundo-card); 
+            padding: 35px; 
+            border-radius: 15px; 
+            border: 2px solid var(--cor-primaria); 
+            box-shadow: 0 0 30px rgba(197, 160, 89, 0.2); 
+            width: 480px; 
+            text-align: center; 
+            backdrop-filter: blur(10px); 
+        }
+
+        h2 { color: var(--cor-primaria); text-transform: uppercase; letter-spacing: 3px; margin: 10px 0; }
+        
+        .campo-foto {
+            background: rgba(197, 160, 89, 0.05);
+            border: 1px dashed var(--cor-primaria);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .campo-foto:hover { background: rgba(197, 160, 89, 0.1); }
+
+        input[type="file"] { display: none; }
+        label.upload-label { cursor: pointer; color: var(--cor-primaria); font-weight: bold; display: block; font-size: 0.9rem; }
+
+        input[type="text"], input[type="number"] { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 8px 0; 
+            border-radius: 6px; 
+            border: 1px solid #333; 
+            background: rgba(45, 45, 45, 0.9); 
+            color: white; 
+            box-sizing: border-box; 
+            outline: none;
+        }
+
+        button { 
+            width: 100%; 
+            padding: 15px; 
+            background: var(--cor-primaria); 
+            border: none; 
+            color: #000; 
+            font-weight: bold; 
+            text-transform: uppercase;
+            cursor: pointer; 
+            border-radius: 6px; 
+            transition: 0.4s; 
+            margin-top: 15px; 
+        }
+
+        button:hover { background: #fff; transform: translateY(-2px); }
+
+        #timer { font-size: 40px; color: var(--cor-erro); font-weight: bold; margin-bottom: 10px; }
+        .hidden { display: none; }
+        .stats { display: flex; justify-content: space-around; margin-bottom: 20px; color: var(--cor-primaria); font-weight: bold; }
+        
+        #opcoes button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #444;
+            color: white;
+            text-align: left;
+            margin-top: 8px;
+            text-transform: none;
+            font-weight: normal;
+        }
+
+        #preview-img { width: 100%; max-height: 150px; object-fit: contain; margin-top: 10px; border-radius: 5px; display: none; border: 1px solid var(--cor-primaria); }
+
+    </style>
+</head>
+<body>
+
+<div id="tela-cadastro" class="container">
+    <img src="formulario.jpg" alt="Logo" style="width: 90px; height: 90px; border-radius: 50%; border: 2px solid var(--cor-primaria); object-fit: cover;">
+    <h2>Egitoncrp</h2>
+    <p style="font-size: 0.8rem; opacity: 0.7; letter-spacing: 1px;">SISTEMA DE RECRUTAMENTO</p>
+    
+    <input type="text" id="discordID" placeholder="ID do Discord (Numérico)">
+    <input type="text" id="nick" placeholder="Nome Completo In-game">
+    <input type="number" id="passaporte" placeholder="ID / Passaporte">
+    <input type="number" id="idade" placeholder="Idade (Vida Real)">
+    <input type="text" id="tempo" placeholder="Tempo de RP (Ex: 1 ano)">
+
+    <div class="campo-foto" onclick="document.getElementById('foto-esc').click()">
+        <label class="upload-label" id="label-foto">📸 CLIQUE PARA ANEXAR PRINT DO ESC</label>
+        <input type="file" id="foto-esc" accept="image/*" onchange="previewFile(event)">
+        <img id="preview-img" src="" alt="Preview">
+    </div>
+
+    <button onclick="iniciarProcesso()">Iniciar Prova</button>
+</div>
+
+<div id="tela-quiz" class="container hidden">
+    <div id="timer">30</div>
+    <div class="stats">
+        <span>Questão: <span id="num-pergunta">1</span>/15</span>
+        <span>Erros: <span id="cont-erros">0</span>/3</span>
+    </div>
+    <div class="pergunta-card">
+        <h3 id="pergunta-texto">...</h3>
+        <div id="opcoes"></div>
+    </div>
+</div>
+
+<div id="tela-resultado" class="container hidden">
+    <h1 id="titulo-final">Processando...</h1>
+    <p id="subtitulo-final">Enviando seus dados para a Tropa do Egito...</p>
+    <button onclick="window.location.reload()">Sair do Sistema</button>
+</div>
+
+<script>
+    let config = {
+        webhook: localStorage.getItem('mta_webhook') || "SUA_WEBHOOK_AQUI",
+        errosParaReprovar: 3,
+        tempoPorPergunta: 30
+    };
+
+    const perguntas = [
+        { q: "O que é VDM?", options: ["Matar com armas de fogo", "Atropelar propositalmente sem motivo de RP", "Bater o carro sem querer"], correct: 1 },
+        { q: "O que é RDM?", options: ["Matar alguém sem motivo focado no RP", "Roubar um banco", "Correr da polícia"], correct: 0 },
+        { q: "O que é MetaGaming?", options: ["Fazer live", "Usar informações de fora do jogo (Discord) no RP", "Falar no rádio"], correct: 1 },
+        { q: "O que é PowerGaming?", options: ["Fazer ações impossíveis na vida real", "Ser o dono da cidade", "Comprar carros caros"], correct: 0 },
+        { q: "O que é Fear RP?", options: ["Não ter medo de nada", "Valorizar a vida do personagem como se fosse a sua", "Ter medo de altura"], correct: 1 },
+        { q: "O que é Combat Logging?", options: ["Quitar/Sair do jogo durante uma ação ou abordagem", "Entrar em combate", "Trocar de personagem"], correct: 0 },
+        { q: "Pode reconhecer alguém mascarado?", options: ["Sim, pela voz ou ID", "Não, é proibido se ele estiver devidamente mascarado", "Apenas se ele for seu amigo"], correct: 1 },
+        { q: "O que é Safe Zone?", options: ["Área de tiro liberado", "Área onde crimes e agressões são proibidos", "Sede da Tropa"], correct: 1 },
+        { q: "O que significa OOC?", options: ["Out of Character (Assuntos da Vida Real)", "Only On Chat", "Organização Criminosa"], correct: 0 },
+        { q: "O que significa IC?", options: ["In Character (Tudo dentro do personagem)", "I am Cop", "Informação Comum"], correct: 0 },
+        { q: "O que é Revenge Kill?", options: ["Matar alguém por vingança após você morrer na ação", "Vingar a morte de um aliado", "Matar um policial"], correct: 0 },
+        { q: "Rendido por 2 pessoas armadas, o que você faz?", options: ["Tento reagir rápido", "Levanto as mãos e sigo as ordens (Fear RP)", "Saio correndo"], correct: 1 },
+        { q: "O que é Flood?", options: ["Nadar", "Repetir mensagens seguidas no chat", "Usar rádio"], correct: 1 },
+        { q: "Pode reviver com 'E' no meio de uma troca de tiros?", options: ["Sim", "Não, deve esperar a ação acabar totalmente", "Apenas se não tiver médicos"], correct: 1 },
+        { q: "O que é Car Jacking?", options: ["Roubar um carro sem motivo de RP apenas para zoar", "Pintar o carro", "Trancar o carro"], correct: 0 }
+    ];
+
+    let indiceAtual = 0, erros = 0, tempoRestante = config.tempoPorPergunta, intervalo;
+    let dadosCandidato = {}, historico = [], fotoArquivo = null;
+
+    function previewFile(event) {
+        fotoArquivo = event.target.files[0];
+        const preview = document.getElementById('preview-img');
+        const label = document.getElementById('label-foto');
+
+        if (fotoArquivo) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = "block";
+                label.innerText = "✅ PRINT SELECIONADO";
+            }
+            reader.readAsDataURL(fotoArquivo);
+        }
+    }
+
+    function iniciarProcesso() {
+        dadosCandidato = {
+            discord: document.getElementById('discordID').value,
+            nick: document.getElementById('nick').value,
+            pass: document.getElementById('passaporte').value,
+            idade: document.getElementById('idade').value,
+            tempo: document.getElementById('tempo').value
+        };
+
+        if (!dadosCandidato.discord || !dadosCandidato.nick || !fotoArquivo) {
+            return alert("ERRO: Preencha todos os dados e anexe o Print do ESC!");
+        }
+
+        document.getElementById('tela-cadastro').classList.add('hidden');
+        document.getElementById('tela-quiz').classList.remove('hidden');
+        mostrarPergunta();
+    }
+
+    function mostrarPergunta() {
+        if (indiceAtual >= perguntas.length) return finalizar(true);
+        document.getElementById('num-pergunta').innerText = indiceAtual + 1;
+        clearInterval(intervalo);
+        tempoRestante = config.tempoPorPergunta;
+        document.getElementById('timer').innerText = tempoRestante;
+
+        const p = perguntas[indiceAtual];
+        document.getElementById('pergunta-texto').innerText = p.q;
+        const btnContainer = document.getElementById('opcoes');
+        btnContainer.innerHTML = "";
+
+        p.options.forEach((opt, i) => {
+            const b = document.createElement('button');
+            b.innerText = opt;
+            b.onclick = () => {
+                if (i !== p.correct) {
+                    historico.push(`❌ ${p.q}`);
+                    erros++;
+                    document.getElementById('cont-erros').innerText = erros;
+                    if (erros >= config.errosParaReprovar) return finalizar(false);
+                } else {
+                    historico.push(`✅ ${p.q}`);
+                }
+                indiceAtual++;
+                mostrarPergunta();
+            };
+            btnContainer.appendChild(b);
+        });
+
+        intervalo = setInterval(() => {
+            tempoRestante--;
+            document.getElementById('timer').innerText = tempoRestante;
+            if (tempoRestante <= 0) {
+                historico.push(`⏰ ${p.q} (Esgotado)`);
+                erros++;
+                if (erros >= config.errosParaReprovar) finalizar(false);
+                else { indiceAtual++; mostrarPergunta(); }
+            }
+        }, 1000);
+    }
+
+    function finalizar(passou) {
+        clearInterval(intervalo);
+        document.getElementById('tela-quiz').classList.add('hidden');
+        document.getElementById('tela-resultado').classList.remove('hidden');
+        
+        const status = passou ? "APROVADO" : "REPROVADO";
+        document.getElementById('titulo-final').innerText = status === "APROVADO" ? "✅ ENVIADO" : "❌ REPROVADO";
+        
+        enviarParaDiscord(status);
+    }
+
+    async function enviarParaDiscord(status) {
+        if (!config.webhook || config.webhook === "SUA_WEBHOOK_AQUI") return;
+
+        const formData = new FormData();
+        
+        // Adiciona a foto do ESC ao envio
+        formData.append('file', fotoArquivo, 'print_esc.png');
+
+        // Cria o relatório completo
+        const embed = {
+            title: "🇪🇬 NOVO RECRUTAMENTO - TROPA DO EGITO 🔱",
+            description: `**RELATÓRIO DE QUESTÕES:**\n${historico.join('\n')}`,
+            color: status === "APROVADO" ? 12951641 : 15158332,
+            fields: [
+                { name: "👤 Candidato", value: `**Nick:** ${dadosCandidato.nick}\n**Passaporte:** ${dadosCandidato.pass}\n**Discord:** <@${dadosCandidato.discord}>`, inline: true },
+                { name: "📋 Info IC/OOC", value: `**Idade:** ${dadosCandidato.idade}\n**Exp:** ${dadosCandidato.tempo}`, inline: true },
+                { name: "📊 Resultado", value: `**Status:** \`${status}\`\n**Erros:** ${erros}/3`, inline: false }
+            ],
+            image: { url: 'attachment://print_esc.png' },
+            footer: { text: "EgitoNCRP • Sistema de Verificação" },
+            timestamp: new Date()
+        };
+
+        formData.append('payload_json', JSON.stringify({ embeds: [embed] }));
+
+        try {
+            await fetch(config.webhook, { method: 'POST', body: formData });
+        } catch (e) {
+            console.error("Erro ao enviar para o Discord");
+        }
+    }
+</script>
+</body>
+</html>
